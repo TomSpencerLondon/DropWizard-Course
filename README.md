@@ -242,5 +242,64 @@ public class DropBookmarksApplication extends Application<DropBookmarksConfigura
 ```
 
 Here we have used io.dropwizard.core.setup.Environment.jersey() to register our resource.
+We can see the result in the browser or use curl to query the API:
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course$ curl -w "\n" localhost:8080/hello
+Hello World
+```
 
+### Add Test for HelloResource
+We can add the following dependencies for testing our resource:
+```xml
 
+<dependencies>
+    <dependency>
+        <groupId>io.dropwizard</groupId>
+        <artifactId>dropwizard-testing</artifactId>
+        <version>${dropwizard.version}</version>
+        <scope>test</scope>
+    </dependency>
+
+    <dependency>
+        <groupId>org.glassfish.jersey.test-framework</groupId>
+        <artifactId>jersey-test-framework-core</artifactId>
+        <version>3.1.1</version>
+        <scope>test</scope>
+    </dependency>
+
+    <dependency>
+        <groupId>org.glassfish.jersey.test-framework.providers</groupId>
+        <artifactId>jersey-test-framework-provider-grizzly2</artifactId>
+        <version>3.1.1</version>
+        <scope>test</scope>
+    </dependency>
+
+    <!-- https://mvnrepository.com/artifact/org.assertj/assertj-core -->
+    <dependency>
+        <groupId>org.assertj</groupId>
+        <artifactId>assertj-core</artifactId>
+        <version>3.24.2</version>
+        <scope>test</scope>
+    </dependency>
+</dependencies>
+```
+
+We can then write our first test on the HelloResource:
+
+```java
+class HelloResourceTest extends JerseyTest {
+    @Override
+    protected Application configure() {
+        return new ResourceConfig(HelloResource.class);
+    }
+
+    @Test
+    void works() {
+        Response response = target("/hello").request().get();
+        String content = response.readEntity(String.class);
+
+        assertThat(content)
+                .isEqualTo("Hello World");
+    }
+}
+```
