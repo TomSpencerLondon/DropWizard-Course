@@ -212,4 +212,35 @@ public class HelloResource {
 }
 ```
 This uses the jakarta.ws.rs library for both @Path and @GET. We have set the expected output with @Produces(MediaType.TEXT_PLAIN).
+We then refer to the resource in the DropBookmarks application:
+```java
+public class DropBookmarksApplication extends Application<DropBookmarksConfiguration> {
+
+    public static void main(final String[] args) throws Exception {
+        new DropBookmarksApplication().run(args);
+    }
+
+    @Override
+    public String getName() {
+        return "DropBookmarks";
+    }
+
+    @Override
+    public void initialize(final Bootstrap<DropBookmarksConfiguration> bootstrap) {
+        // TODO: application initialization
+    }
+
+    @Override
+    public void run(final DropBookmarksConfiguration configuration,
+                    final Environment environment) {
+        // TODO: implement application
+
+        environment.jersey().register(new HelloResource());
+    }
+
+}
+```
+
+Here we have used io.dropwizard.core.setup.Environment.jersey() to register our resource.
+
 
