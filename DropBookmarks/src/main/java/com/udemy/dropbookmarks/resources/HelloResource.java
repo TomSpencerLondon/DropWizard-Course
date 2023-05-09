@@ -1,12 +1,11 @@
 package com.udemy.dropbookmarks.resources;
 
+import com.udemy.dropbookmarks.core.User;
+import io.dropwizard.auth.Auth;
 import jakarta.ws.rs.GET;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
-
-import javax.print.attribute.standard.Media;
-import java.awt.*;
 
 @Path("/hello")
 public class HelloResource {
@@ -15,5 +14,12 @@ public class HelloResource {
     @Produces(MediaType.TEXT_PLAIN)
     public String getGreeting() {
         return "Hello World";
+    }
+
+    @GET
+    @Produces(MediaType.TEXT_PLAIN)
+    @Path("/secured")
+    public String getSecuredGreeting(@Auth User user) {
+        return "Hello secured world";
     }
 }

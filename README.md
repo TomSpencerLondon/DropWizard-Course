@@ -303,3 +303,85 @@ class HelloResourceTest extends JerseyTest {
     }
 }
 ```
+This link is quite useful for adding tests for Jersey:
+https://www.baeldung.com/jersey-test
+
+
+### Basic Authentication
+
+We will now look at adding basic authentication to the project. First we need to add a class implementing the Authenticator interface.
+We then register the Authenticator in the Appplication class. Finally we secure the method.
+
+First we add the Authenticator class:
+```java
+public class HelloAuthenticator implements Authenticator<BasicCredentials, User> {
+    @Override
+    public Optional<User> authenticate(BasicCredentials basicCredentials) throws AuthenticationException {
+        if ("password".equals(basicCredentials.getPassword())) {
+            return Optional.of(new User());
+        }
+        
+        return Optional.empty();
+    }
+}
+```
+
+We then add a new secured path to the HelloResource:
+```java
+@Path("/hello")
+public class HelloResource {
+
+    @GET
+    @Produces(MediaType.TEXT_PLAIN)
+    public String getGreeting() {
+        return "Hello World";
+    }
+
+    @GET
+    @Produces(MediaType.TEXT_PLAIN)
+    @Path("/secured")
+    public String getSecuredGreeting(@Auth User user) {
+        return "Hello secured world";
+    }
+}
+```
+and also register the authentication to the DropBookmarksApplication:
+```java
+public class DropBookmarksApplication extends Application<DropBookmarksConfiguration> {
+
+    public static void main(final String[] args) throws Exception {
+        new DropBookmarksApplication().run(args);
+    }
+
+    @Override
+    public String getName() {
+        return "DropBookmarks";
+    }
+
+    @Override
+    public void initialize(final Bootstrap<DropBookmarksConfiguration> bootstrap) {
+        // TODO: application initialization
+    }
+
+    @Override
+    public void run(final DropBookmarksConfiguration configuration,
+                    final Environment environment) {
+        // TODO: implement application
+
+        environment.jersey().register(new HelloResource());
+
+        environment.jersey().register(new AuthDynamicFeature(
+                new BasicCredentialAuthFilter.Builder<User>()
+                        .setAuthenticator(new HelloAuthenticator())
+                        .setRealm("SUPER SECRET STUFF")
+                        .buildAuthFilter()
+        ));
+    }
+
+}
+```
+
+We can create a base 64 version of our username and password:
+![image](https://github.com/TomSpencerLondon/DropWizard-Course/assets/27693622/11893caf-6966-4eb0-839b-575df18f6d9e)
+And then query the API with Basic Authorization:
+![image](https://github.com/TomSpencerLondon/LeetCode/assets/27693622/e9bf404f-0e56-4fac-9eb5-c5a3b342d17e)
