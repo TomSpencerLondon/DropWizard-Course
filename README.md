@@ -976,3 +976,12 @@ mysql> describe users;
 3 rows in set (0.01 sec)
 ```
 
+If we want to drop the tables we can use:
+```bash
+mvn liquibase:dropAll
+```
+We can also view the change log in the DATABASECHANGELOG table:
+![image](https://github.com/TomSpencerLondon/LeetCode/assets/27693622/1721198e-47a3-4211-ad6b-73c630d38a08)
+
+We would then add a change set if we wanted to add a column to the database.
+
