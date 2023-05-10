@@ -985,3 +985,64 @@ We can also view the change log in the DATABASECHANGELOG table:
 
 We would then add a change set if we wanted to add a column to the database.
 
+We can now add the bookmarks table and add data to the user table:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+    <changeSet id="1" author="tom" dbms="mysql">
+        <createTable tableName="users">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="username" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="password" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <comment>Script to create user table</comment>
+    </changeSet>
+
+    <changeSet id="2" author="tom">
+        <createTable tableName="bookmarks">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="url" type="varchar(1024)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar(2048)"/>
+            <column name="user_id" type="bigint">
+                <constraints nullable="false"
+                             foreignKeyName="fk_users_id"
+                             referencedTableName="users"
+                             referencedColumnNames="id"
+                />
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="3" author="tom" context="DEV">
+        <insert tableName="users">
+            <column name="id" value="1" />
+            <column name="username" value="udemy" />
+            <column name="password" value="password" />
+        </insert>
+        <rollback>
+            <delete tableName="users">
+                <where>
+                    id=1
+                </where>
+            </delete>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>
+```
