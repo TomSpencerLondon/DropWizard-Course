@@ -1125,3 +1125,138 @@ mysql> select * from users;
 +----+----------+----------+
 1 row in set (0.00 sec)
 ```
+
+#### Migration
+
+We can see the changesets with:
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course/DropBookmarks$ mvn liquibase:updateSQL -Dliquibase.contexts=DEV
+```
+This produces a migrate.sql in /target/liquibase:
+```sql
+
+--  Create Database Lock Table
+CREATE TABLE DATABASECHANGELOGLOCK (ID INT NOT NULL, `LOCKED` BIT(1) NOT NULL, LOCKGRANTED datetime NULL, LOCKEDBY VARCHAR(255) NULL, CONSTRAINT PK_DATABASECHANGELOGLOCK PRIMARY KEY (ID));
+
+--  Initialize Database Lock Table
+DELETE FROM DATABASECHANGELOGLOCK;
+
+INSERT INTO DATABASECHANGELOGLOCK (ID, `LOCKED`) VALUES (1, 0);
+
+--  Lock Database
+UPDATE DATABASECHANGELOGLOCK SET `LOCKED` = 1, LOCKEDBY = 'tom-ubuntu (192.168.49.1)', LOCKGRANTED = NOW() WHERE ID = 1 AND `LOCKED` = 0;
+
+--  Create Database Change Log Table
+CREATE TABLE DATABASECHANGELOG (ID VARCHAR(255) NOT NULL, AUTHOR VARCHAR(255) NOT NULL, FILENAME VARCHAR(255) NOT NULL, DATEEXECUTED datetime NOT NULL, ORDEREXECUTED INT NOT NULL, EXECTYPE VARCHAR(10) NOT NULL, MD5SUM VARCHAR(35) NULL, `DESCRIPTION` VARCHAR(255) NULL, COMMENTS VARCHAR(255) NULL, TAG VARCHAR(255) NULL, LIQUIBASE VARCHAR(20) NULL, CONTEXTS VARCHAR(255) NULL, LABELS VARCHAR(255) NULL, DEPLOYMENT_ID VARCHAR(10) NULL);
+
+--  *********************************************************************
+--  Update Database Script
+--  *********************************************************************
+--  Change Log: migrations.xml
+--  Ran at: 10/05/2023, 15:04
+--  Against: root@localhost@jdbc:mysql://localhost:3306/DropBookmarks
+--  Liquibase version: 4.19.0
+--  *********************************************************************
+
+--  Changeset migrations.xml::1::tom
+--  Script to create user table
+CREATE TABLE users (id BIGINT AUTO_INCREMENT NOT NULL, username VARCHAR(255) NOT NULL, password VARCHAR(255) NOT NULL, CONSTRAINT PK_USERS PRIMARY KEY (id));
+
+INSERT INTO DATABASECHANGELOG (ID, AUTHOR, FILENAME, DATEEXECUTED, ORDEREXECUTED, MD5SUM, `DESCRIPTION`, COMMENTS, EXECTYPE, CONTEXTS, LABELS, LIQUIBASE, DEPLOYMENT_ID) VALUES ('1', 'tom', 'migrations.xml', NOW(), 1, '8:89916a7999d9f39d1ffbdc75fe24582a', 'createTable tableName=users', 'Script to create user table', 'EXECUTED', NULL, NULL, '4.19.0', '3727488397');
+
+--  Changeset migrations.xml::2::tom
+--  Script to create bookmark table
+CREATE TABLE bookmarks (id BIGINT AUTO_INCREMENT NOT NULL, name VARCHAR(255) NOT NULL, url VARCHAR(1024) NOT NULL, `description` VARCHAR(2048) NULL, user_id BIGINT NOT NULL, CONSTRAINT PK_BOOKMARKS PRIMARY KEY (id), CONSTRAINT fk_users_id FOREIGN KEY (user_id) REFERENCES users(id));
+
+INSERT INTO DATABASECHANGELOG (ID, AUTHOR, FILENAME, DATEEXECUTED, ORDEREXECUTED, MD5SUM, `DESCRIPTION`, COMMENTS, EXECTYPE, CONTEXTS, LABELS, LIQUIBASE, DEPLOYMENT_ID) VALUES ('2', 'tom', 'migrations.xml', NOW(), 2, '8:ee00e8370f09936706b139b925b3c37d', 'createTable tableName=bookmarks', 'Script to create bookmark table', 'EXECUTED', NULL, NULL, '4.19.0', '3727488397');
+
+--  Changeset migrations.xml::3::tom
+INSERT INTO users (id, username, password) VALUES ('1', 'udemy', 'password');
+
+INSERT INTO DATABASECHANGELOG (ID, AUTHOR, FILENAME, DATEEXECUTED, ORDEREXECUTED, MD5SUM, `DESCRIPTION`, COMMENTS, EXECTYPE, CONTEXTS, LABELS, LIQUIBASE, DEPLOYMENT_ID) VALUES ('3', 'tom', 'migrations.xml', NOW(), 3, '8:1ea312ee6827e396c6db2f904186aae8', 'insert tableName=users', '', 'EXECUTED', 'DEV', NULL, '4.19.0', '3727488397');
+
+--  Release Database Lock
+UPDATE DATABASECHANGELOGLOCK SET `LOCKED` = 0, LOCKEDBY = NULL, LOCKGRANTED = NULL WHERE ID = 1;
+
+```
+this shows the lock table to avoid updates from other machines. The DatabaseChangeLog table is created and then the users and bookmarks tables are created and data is inserted into the users table.
+
+#### Additional liquibase commands
+We can run rollbacks with Liquibase:
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course/DropBookmarks$ mvn liquibase:rollbackSQL \
+> -Dliquibase.rollbackCount=1
+```
+We can also use date and tag for our rollbacks. Our rollback SQL shows the following:
+```bash
+--  Lock Database
+UPDATE DATABASECHANGELOGLOCK SET `LOCKED` = 1, LOCKEDBY = 'tom-ubuntu (192.168.49.1)', LOCKGRANTED = NOW() WHERE ID = 1 AND `LOCKED` = 0;
+
+--  *********************************************************************
+--  Rollback 1 Change(s) Script
+--  *********************************************************************
+--  Change Log: migrations.xml
+--  Ran at: 10/05/2023, 15:13
+--  Against: root@localhost@jdbc:mysql://localhost:3306/DropBookmarks
+--  Liquibase version: 4.19.0
+--  *********************************************************************
+
+--  Rolling Back ChangeSet: migrations.xml::3::tom
+DELETE FROM users WHERE id=1;
+
+DELETE FROM DATABASECHANGELOG WHERE ID = '3' AND AUTHOR = 'tom' AND FILENAME = 'migrations.xml';
+
+--  Release Database Lock
+UPDATE DATABASECHANGELOGLOCK SET `LOCKED` = 0, LOCKEDBY = NULL, LOCKGRANTED = NULL WHERE ID = 1;
+```
+The data about our user has been removed from the table.
+We can view our change logs with:
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course/DropBookmarks$ mvn liquibase:generateChangeLog -Dliquibase.outputChangeLogFile=changelog.xml
+```
+This produces a changelog.xml file in /target:
+
+```xml
+<?xml version="1.1" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:ext="http://www.liquibase.org/xml/ns/dbchangelog-ext" xmlns:pro="http://www.liquibase.org/xml/ns/pro" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog-ext http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-ext.xsd http://www.liquibase.org/xml/ns/pro http://www.liquibase.org/xml/ns/pro/liquibase-pro-latest.xsd http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+    <changeSet author="tom (generated)" id="1683728354402-1">
+        <createTable tableName="bookmarks">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="url" type="VARCHAR(1024)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="VARCHAR(2048)"/>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="tom (generated)" id="1683728354402-2">
+        <createTable tableName="users">
+            <column autoIncrement="true" name="id" type="BIGINT">
+                <constraints nullable="false" primaryKey="true"/>
+            </column>
+            <column name="username" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="password" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet author="tom (generated)" id="1683728354402-3">
+        <createIndex indexName="fk_users_id" tableName="bookmarks">
+            <column name="user_id"/>
+        </createIndex>
+    </changeSet>
+    <changeSet author="tom (generated)" id="1683728354402-4">
+        <addForeignKeyConstraint baseColumnNames="user_id" baseTableName="bookmarks" constraintName="fk_users_id" deferrable="false" initiallyDeferred="false" onDelete="RESTRICT" onUpdate="RESTRICT" referencedColumnNames="id" referencedTableName="users" validate="true"/>
+    </changeSet>
+</databaseChangeLog>
+```
+
