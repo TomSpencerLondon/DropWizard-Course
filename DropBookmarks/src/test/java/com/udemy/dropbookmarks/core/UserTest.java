@@ -30,9 +30,6 @@ public class UserTest extends EntityTest {
         assertTrue(constraintViolations.isEmpty());
     }
 
-    /**
-     * Test of the constructor of the User class.
-     */
     @Test
     public void usernameIsNull() {
         User user = new User(null, "1");
@@ -177,27 +174,27 @@ public class UserTest extends EntityTest {
     @Test
     public void testEqualsOtherIsNull() {
         User user = new User("Coda", "1");
-        assertFalse(user.equals(null));
+        assertNotEquals(null, user);
         assertNotEquals(user.hashCode(), Objects.hashCode(null));
     }
 
     @Test
     public void testEqualsOtherIsSame() {
         User user = new User("Coda", "1");
-        assertTrue(user.equals(user));
+        assertEquals(user, user);
     }
 
     @Test
     public void testEqualsOtherIsBookmark() {
         User user = new User("Coda", "1");
-        assertFalse(user.equals(new Bookmark()));
+        assertNotEquals(user, new Bookmark());
     }
 
     @Test
     public void testEqualsAnotherUser() {
         User user = new User("Coda", "1");
         User other = new User();
-        assertFalse(user.equals(other));
+        assertNotEquals(user, other);
         assertNotEquals(user.hashCode(), other.hashCode());
     }
 
@@ -208,7 +205,7 @@ public class UserTest extends EntityTest {
         user.setId(expectedId);
         User other = new User("Coda", "1");
         other.setId(expectedId);
-        assertTrue(user.equals(other));
+        assertEquals(user, other);
         assertEquals(user.hashCode(), other.hashCode());
     }
 
@@ -216,7 +213,7 @@ public class UserTest extends EntityTest {
     public void testEqualsIdIsNull() {
         User user = new User("Coda", "1");
         User other = new User("Coda", "1");
-        assertTrue(user.equals(other));
+        assertEquals(user, other);
         assertEquals(user.hashCode(), other.hashCode());
     }
 
@@ -226,7 +223,7 @@ public class UserTest extends EntityTest {
         int expectedId = 1;
         user.setId(expectedId);
         User other = new User("Coda", "1");
-        assertFalse(user.equals(other));
+        assertNotEquals(user, other);
         assertNotEquals(user.hashCode(), other.hashCode());
     }
 }
