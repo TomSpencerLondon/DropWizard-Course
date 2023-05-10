@@ -39,6 +39,7 @@
                 />
             </column>
         </createTable>
+        <comment>Script to create bookmark table</comment>
     </changeSet>
 
     <changeSet id="3" author="tom" context="DEV">

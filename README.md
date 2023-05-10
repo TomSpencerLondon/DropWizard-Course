@@ -1046,3 +1046,82 @@ We can now add the bookmarks table and add data to the user table:
     </changeSet>
 </databaseChangeLog>
 ```
+
+We can now delete the migrations:
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course/DropBookmarks$ mvn liquibase:dropAll
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------------< com.udemy:DropBookmarks >-----------------------
+[INFO] Building DropBookmarks 1.0-SNAPSHOT
+[INFO] --------------------------------[ jar ]---------------------------------
+[WARNING] The artifact mysql:mysql-connector-java:jar:8.0.33 has been relocated to com.mysql:mysql-connector-j:jar:8.0.33
+[INFO] 
+[INFO] --- liquibase-maven-plugin:4.21.1:dropAll (default-cli) @ DropBookmarks ---
+[INFO] ------------------------------------------------------------------------
+[INFO] ####################################################
+##   _     _             _ _                      ##
+##  | |   (_)           (_) |                     ##
+##  | |    _  __ _ _   _ _| |__   __ _ ___  ___   ##
+##  | |   | |/ _` | | | | | '_ \ / _` / __|/ _ \  ##
+##  | |___| | (_| | |_| | | |_) | (_| \__ \  __/  ##
+##  \_____/_|\__, |\__,_|_|_.__/ \__,_|___/\___|  ##
+##              | |                               ##
+##              |_|                               ##
+##                                                ## 
+##  Get documentation at docs.liquibase.com       ##
+##  Get certified courses at learn.liquibase.com  ## 
+##  Free schema change activity reports at        ##
+##      https://hub.liquibase.com                 ##
+##                                                ##
+####################################################
+Starting Liquibase at 14:11:54 (version 4.19.0 #6648 built at 2023-01-17 15:02+0000)
+Loading class `com.mysql.jdbc.Driver'. This is deprecated. The new driver class is `com.mysql.cj.jdbc.Driver'. The driver is automatically registered via the SPI and manual loading of the driver class is generally unnecessary.
+[INFO] Executing on Database: jdbc:mysql://localhost:3306/DropBookmarks
+[WARNING] Unable to register command 'dbUrlConnectionCommandStep' argument 'defaultSchemaName': Duplicate argument 'defaultSchemaName' found for command 'dbUrlConnectionCommandStep'
+[INFO] Cannot load service: liquibase.command.CommandStep: Provider liquibase.command.core.DbUrlConnectionCommandStep could not be instantiated
+[INFO] Successfully acquired change log lock
+[INFO] Dropping Database Objects in schema: DropBookmarks.DropBookmarks
+[INFO] Successfully deleted all supported object types in schema DropBookmarks.DropBookmarks.
+[INFO] Successfully released change log lock
+All objects dropped from root@localhost@jdbc:mysql://localhost:3306/DropBookmarks
+[INFO] Command execution complete
+[INFO] ------------------------------------------------------------------------
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  4.005 s
+[INFO] Finished at: 2023-05-10T14:11:56+01:00
+[INFO] ------------------------------------------------------------------------
+
+```
+
+Now we use the DEV context to run our migration:
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course/DropBookmarks$ mvn liquibase:updateSQL \
+> -Dliquibase.contexts=DEV
+```
+Each time we should remember that we need to run mvn package to ensure that the new migration is added to
+/target/classes/migrations.xml.
+We can then see the updated tables:
+```bash
+mysql> show tables;
++-------------------------+
+| Tables_in_DropBookmarks |
++-------------------------+
+| DATABASECHANGELOG       |
+| DATABASECHANGELOGLOCK   |
+| bookmarks               |
+| users                   |
++-------------------------+
+4 rows in set (0.01 sec)
+
+mysql> select * from users;
++----+----------+----------+
+| id | username | password |
++----+----------+----------+
+|  1 | udemy    | password |
++----+----------+----------+
+1 row in set (0.00 sec)
+```
