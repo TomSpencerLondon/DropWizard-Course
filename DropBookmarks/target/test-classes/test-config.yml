@@ -12,8 +12,3 @@ server:
       keyStorePath: dropbookmarks.keystore
       keyStorePassword: password
       validateCerts: false
-database:
-  driverClass: com.mysql.jdbc.Driver
-  user: root
-  password: password
-  url: jdbc:mysql://localhost:3306/DropBookmarks

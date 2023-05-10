@@ -466,6 +466,253 @@ public class HelloResourceSecuredTest {
 ```
 
 ### Configuration and HTTPS
+First we can experiment with the port on which we will expose our service:
+
+```yaml
+logging:
+  level: INFO
+  loggers:
+    com.udemy: DEBUG
+password: password
+server:
+  applicationConnectors:
+    - type: http
+      port: 8085
+```
+We can now start our application and see the running app on 8085:
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course$ curl -w "\n" localhost:8085/hello
+Hello World
+```
+
+We can now add https. First we will add a keystore for the encrypted connection:
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course$ keytool -genkeypair \
+-keyalg RSA \
+-dname "CN=localhost" \
+-keystore dropbookmarks.keystore \
+-keypass password \
+-storepass password
+
+```
+This creates the keystore:
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course/DropBookmarks$ ls
+config.yml  dependency-reduced-pom.xml  dropbookmarks.keystore  pom.xml  README.md  src  target
+```
+
+We will now add https support to our application:
+```bash
+logging:
+  level: INFO
+  loggers:
+    com.udemy: DEBUG
+password: password
+server:
+  applicationConnectors:
+    - type: http
+      port: 8080
+    - type: https
+      port: 8443
+      keyStorePath: dropbookmarks.keystore
+      keyStorePassword: password
+      validateCerts: false
+```
+For production, we will need to produce a certificate which the browser trusts.
+
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course/DropBookmarks$ curl -w "\n" https://localhost:8443/hello
+curl: (60) SSL certificate problem: self-signed certificate
+More details here: https://curl.se/docs/sslcerts.html
+
+curl failed to verify the legitimacy of the server and therefore could not
+establish a secure connection to it. To learn more about this situation and
+how to fix it, please visit the web page mentioned above.
+```
+We can use -k to ignore the warning:
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course/DropBookmarks$ curl -w "\n" https://localhost:8443/hello -k
+Hello World
+```
+
+We can now add a test for the http request expecting a successful authentication when auth is provided:
+```java
+@ExtendWith(DropwizardExtensionsSupport.class)
+public class AuthIntegrationTest {
+  private static DropwizardAppExtension<DropBookmarksConfiguration> EXT = new DropwizardAppExtension<>(
+          DropBookmarksApplication.class,
+          ResourceHelpers.resourceFilePath("test-config.yml")
+  );
+
+
+
+  @Test
+  void failsAuthenticationGivenNoAuthProvided() {
+    Client client = EXT.client();
+
+    Response response = client.target(
+                    String.format("http://localhost:8080/hello/secured", EXT.getLocalPort()))
+            .request().get();
+
+    assertThat(response.getStatus()).isEqualTo(401);
+  }
+
+  @Test
+  void successfulAuthenticationGivenAuthProvided() {
+    String credential = "Basic " + Base64.getEncoder().encodeToString("username:password".getBytes());
+    Client client = EXT.client();
+
+    Response response = client.target(
+                    String.format("http://localhost:8080/hello/secured", EXT.getLocalPort()))
+            .request()
+            .header(HttpHeaders.AUTHORIZATION, credential)
+            .get();
+
+    String content = response.readEntity(String.class);
+    assertThat(response.getStatus()).isEqualTo(200);
+    assertThat(content)
+            .isEqualTo("Hello secured world");
+  }
+
+}
+
+```
+
+We will now add a test for https:
+```java
+
+@ExtendWith(DropwizardExtensionsSupport.class)
+public class AuthIntegrationTest {
+    private static DropwizardAppExtension<DropBookmarksConfiguration> EXT = new DropwizardAppExtension<>(
+            DropBookmarksApplication.class,
+            ResourceHelpers.resourceFilePath("test-config.yml")
+    );
+
+    private static final String TRUST_STORE_FILE_NAME = "dropbookmarks.keystore";
+    private static final String TRUST_STORE_PASSWORD = "password";
+
+    @Test
+    void failsAuthenticationGivenNoAuthProvided() {
+        Client client = EXT.client();
+
+        Response response = client.target(
+                        String.format("http://localhost:8080/hello/secured", EXT.getLocalPort()))
+                .request().get();
+
+        assertThat(response.getStatus()).isEqualTo(401);
+    }
+
+    @Test
+    void successfulAuthenticationGivenAuthProvided() {
+        String credential = "Basic " + Base64.getEncoder().encodeToString("username:password".getBytes());
+        Client client = EXT.client();
+
+        Response response = client.target(
+                        String.format("http://localhost:8080/hello/secured", EXT.getLocalPort()))
+                .request()
+                .header(HttpHeaders.AUTHORIZATION, credential)
+                .get();
+
+        String content = response.readEntity(String.class);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(content)
+                .isEqualTo("Hello secured world");
+    }
+
+    @Test
+    void successfulAuthenticationGivenAuthProvidedOnHttps() {
+        SslConfigurator configurator = SslConfigurator.newInstance();
+        configurator.trustStoreFile(TRUST_STORE_FILE_NAME)
+                .trustStorePassword(TRUST_STORE_PASSWORD);
+        SSLContext context = configurator.createSSLContext();
+
+        String credential = "Basic " + Base64.getEncoder().encodeToString("username:password".getBytes());
+        Client client = ClientBuilder.newBuilder()
+                .sslContext(context)
+                .build();
+
+        Response response = client.target(
+                        String.format("https://localhost:8443/hello/secured", EXT.getLocalPort()))
+                .request()
+                .header(HttpHeaders.AUTHORIZATION, credential)
+                .get();
+
+        String content = response.readEntity(String.class);
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(content)
+                .isEqualTo("Hello secured world");
+    }
+
+}
+```
+
+This link was quite useful for https:
+https://gist.github.com/javaeeeee/8fea2304b481fbcc4f5b
+
+### Database connection
+We can now configure the database connection. First we add the dependencies:
+```xml
+<dependencies>
+  <dependency>
+    <groupId>mysql</groupId>
+    <artifactId>mysql-connector-java</artifactId>
+    <version>8.0.33</version>
+  </dependency>
+  <dependency>
+    <groupId>io.dropwizard</groupId>
+    <artifactId>dropwizard-hibernate</artifactId>
+    <version>${dropwizard.version}</version>
+  </dependency>
+</dependencies>
+```
+
+Next we add the connection configuration to config.yml:
+```yaml
+logging:
+  level: INFO
+  loggers:
+    com.udemy: DEBUG
+password: password
+server:
+  applicationConnectors:
+    - type: http
+      port: 8080
+    - type: https
+      port: 8443
+      keyStorePath: dropbookmarks.keystore
+      keyStorePassword: password
+      validateCerts: false
+database:
+  driverClass: com.mysql.jdbc.Driver
+  user: root
+  password: password
+  url: jdbc:mysql://localhost:3306/DropBookmarks
+```
+
+To reset the password on ubuntu we can run:
+```bash
+sudo service mysql start
+sudo mysql
+
+mysql> ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root';
+tom@tom-ubuntu:~$ sudo mysql -u root -p
+Enter password: 
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 13
+Server version: 8.0.33-0ubuntu0.22.10.1 (Ubuntu)
+
+Copyright (c) 2000, 2023, Oracle and/or its affiliates.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> 
+```
+
+
 
 
 
