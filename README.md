@@ -2,6 +2,8 @@
 
 Dropwizard is a collection of Java frameworks combined for creating RESTful APIs and microservices.
 It was created by Coda Hale. 
+This course is quite good for dropwizard:
+https://www.udemy.com/course/getting-started-with-dropwizard
 
 ### Overview
 In this course we will look at:
@@ -712,7 +714,265 @@ Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
 mysql> 
 ```
 
+We then add the DataSourceFactory to our configuration file:
+```java
+public class DropBookmarksConfiguration extends Configuration {
+    @NotEmpty
+    private String password;
+    
+    @NotNull
+    @Valid
+    private DataSourceFactory dataSourceFactory = new DataSourceFactory();
+
+    public String getPassword() {
+        return password;
+    }
+
+    public void setPassword(String password) {
+        this.password = password;
+    }
+
+    @JsonProperty("database")
+    public DataSourceFactory getDataSourceFactory() {
+        return dataSourceFactory;
+    }
+
+    public void setDataSourceFactory(DataSourceFactory dataSourceFactory) {
+        this.dataSourceFactory = dataSourceFactory;
+    }
+}
+```
+
+### Liquibase Database Migrations
+This is the database set up for our users and bookmarks tables which we will use in our application:
+![bookmarksdb](https://github.com/TomSpencerLondon/LeetCode/assets/27693622/34e1a326-4017-4c69-8971-e2b25343a384)
+
+We could create our tables using SQL:
+```sql
+create table users(
+    id bigint primary key,
+    username varchar(255),
+    password varchar(255)
+)
+
+create table bookmarks(
+    id bigint primary key,
+    name varchar(255),
+    url varchar(1024),
+    description varchar(2048),
+    user_id bigint,
+    foreign key (id) references users(id)
+)
+```
+But we should bear in mind that on a project several developers work together and each environment needs databases in sync.
+To avoid a mess we should use database migrations. This creates a separate table so that we can confirm the migrations that have
+been applied. We will use Liquibase as our migration tool. This link is quite useful for Liquibase:
+https://docs.liquibase.com/start/get-started/liquibase-sql.html
+
+First we add the Datasource to our DropBookmarksConfguration file:
+```java
+public class DropBookmarksApplication extends Application<DropBookmarksConfiguration> {
+
+    public static void main(final String[] args) throws Exception {
+        new DropBookmarksApplication().run(args);
+    }
+
+    @Override
+    public String getName() {
+        return "DropBookmarks";
+    }
+
+    @Override
+    public void initialize(final Bootstrap<DropBookmarksConfiguration> bootstrap) {
+        bootstrap.addBundle(new MigrationsBundle<DropBookmarksConfiguration>() {
+            @Override
+            public DataSourceFactory getDataSourceFactory(DropBookmarksConfiguration configuration) {
+                return configuration.getDataSourceFactory();
+            }
+        });
+    }
+
+    @Override
+    public void run(final DropBookmarksConfiguration configuration,
+                    final Environment environment) {
+
+        environment.jersey().register(new HelloResource());
+
+        environment.jersey().register(new AuthDynamicFeature(
+                new BasicCredentialAuthFilter.Builder<User>()
+                        .setAuthenticator(new HelloAuthenticator(configuration.getPassword()))
+                        .setRealm("SUPER SECRET STUFF")
+                        .buildAuthFilter()
+        ));
+    }
+
+}
+```
+
+Then we add the migrations.xml file for our migrations:
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.1.xsd">
+    <changeSet id="1" author="tom" dbms="mysql">
+        <createTable tableName="users">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false" />
+            </column>
+            <column name="username" type="varchar(255)">
+                <constraints nullable="false" />
+            </column>
+            <column name="password" type="varchar(255)">
+                <constraints nullable="false" />
+            </column>
+        </createTable>
+        <comment>Script to create user table</comment>
+    </changeSet>
+
+</databaseChangeLog>
+
+```
+Next we add the Liquibase plugin to our pom.xml:
+```xml
+
+<plugin>
+  <groupId>org.liquibase</groupId>
+  <artifactId>liquibase-maven-plugin</artifactId>
+  <version>4.21.1</version>
+  <configuration>
+    <changeLogFile>migrations.xml</changeLogFile>
+    <driver>com.mysql.jdbc.Driver</driver>
+    <url>jdbc:mysql://localhost:3306/DropBookmarks</url>
+    <username>root</username>
+    <password>root</password>
+  </configuration>
+</plugin>
+```
+Here we are using a local database. Next we add the DropBookmarks database in mysql:
+
+```bash
+tom@tom-ubuntu:~$ sudo mysql -u root -p
+Enter password: 
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 22
+Server version: 8.0.33-0ubuntu0.22.10.1 (Ubuntu)
+
+Copyright (c) 2000, 2023, Oracle and/or its affiliates.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> create database DropBookmarks;
+Query OK, 1 row affected (0.02 sec)
+```
+We run the migrations:
+```bash
+mvn package
+tom@tom-ubuntu:~/Projects/Dropwizard-Course/DropBookmarks$ mvn liquibase:update
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ----------------------< com.udemy:DropBookmarks >-----------------------
+[INFO] Building DropBookmarks 1.0-SNAPSHOT
+[INFO] --------------------------------[ jar ]---------------------------------
+[WARNING] The artifact mysql:mysql-connector-java:jar:8.0.33 has been relocated to com.mysql:mysql-connector-j:jar:8.0.33
+[INFO] 
+[INFO] --- liquibase-maven-plugin:4.21.1:update (default-cli) @ DropBookmarks ---
+[INFO] ------------------------------------------------------------------------
+[INFO] ####################################################
+##   _     _             _ _                      ##
+##  | |   (_)           (_) |                     ##
+##  | |    _  __ _ _   _ _| |__   __ _ ___  ___   ##
+##  | |   | |/ _` | | | | | '_ \ / _` / __|/ _ \  ##
+##  | |___| | (_| | |_| | | |_) | (_| \__ \  __/  ##
+##  \_____/_|\__, |\__,_|_|_.__/ \__,_|___/\___|  ##
+##              | |                               ##
+##              |_|                               ##
+##                                                ## 
+##  Get documentation at docs.liquibase.com       ##
+##  Get certified courses at learn.liquibase.com  ## 
+##  Free schema change activity reports at        ##
+##      https://hub.liquibase.com                 ##
+##                                                ##
+####################################################
+Starting Liquibase at 13:43:28 (version 4.19.0 #6648 built at 2023-01-17 15:02+0000)
+Loading class `com.mysql.jdbc.Driver'. This is deprecated. The new driver class is `com.mysql.cj.jdbc.Driver'. The driver is automatically registered via the SPI and manual loading of the driver class is generally unnecessary.
+[INFO] Executing on Database: jdbc:mysql://localhost:3306/DropBookmarks
+[WARNING] Unable to register command 'dbUrlConnectionCommandStep' argument 'defaultSchemaName': Duplicate argument 'defaultSchemaName' found for command 'dbUrlConnectionCommandStep'
+[INFO] Cannot load service: liquibase.command.CommandStep: Provider liquibase.command.core.DbUrlConnectionCommandStep could not be instantiated
+[INFO] Successfully acquired change log lock
+[INFO] Creating database history table with name: DATABASECHANGELOG
+[INFO] Reading from DATABASECHANGELOG
+[INFO] Using deploymentId: 3722610641
+[INFO] Reading from DATABASECHANGELOG
+Running Changeset: migrations.xml::1::tom
+[INFO] Table users created
+[INFO] ChangeSet migrations.xml::1::tom ran successfully in 50ms
+[INFO] UPDATE SUMMARY
+[INFO] Run:                          1
+[INFO] Previously run:               0
+[INFO] Filtered out:                 0
+[INFO] -------------------------------
+[INFO] Total change sets:            1
 
 
+UPDATE SUMMARY
+Run:                          1
+Previously run:               0
+Filtered out:                 0
+-------------------------------
+Total change sets:            1
 
+[INFO] Update summary generated
+[INFO] Update command completed successfully.
+Liquibase: Update has been successful.
+[INFO] Successfully released change log lock
+[INFO] Successfully released change log lock
+[INFO] Command execution complete
+[INFO] ------------------------------------------------------------------------
+[INFO] 
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  3.815 s
+[INFO] Finished at: 2023-05-10T13:43:30+01:00
+[INFO] ------------------------------------------------------------------------
+
+```
+We can now check our database to ensure that the migration has run successfully:
+
+```bash
+mysql> use DropBookmarks;
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Database changed
+mysql> show tables;
++-------------------------+
+| Tables_in_DropBookmarks |
++-------------------------+
+| DATABASECHANGELOG       |
+| DATABASECHANGELOGLOCK   |
+| users                   |
++-------------------------+
+3 rows in set (0.00 sec)
+
+mysql> select * from users;
+Empty set (0.00 sec)
+
+mysql> describe users;
++----------+--------------+------+-----+---------+----------------+
+| Field    | Type         | Null | Key | Default | Extra          |
++----------+--------------+------+-----+---------+----------------+
+| id       | bigint       | NO   | PRI | NULL    | auto_increment |
+| username | varchar(255) | NO   |     | NULL    |                |
+| password | varchar(255) | NO   |     | NULL    |                |
++----------+--------------+------+-----+---------+----------------+
+3 rows in set (0.01 sec)
+```
 

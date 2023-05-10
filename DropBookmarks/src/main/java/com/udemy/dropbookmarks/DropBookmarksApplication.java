@@ -8,6 +8,8 @@ import io.dropwizard.auth.AuthDynamicFeature;
 import io.dropwizard.core.Application;
 import io.dropwizard.core.setup.Bootstrap;
 import io.dropwizard.core.setup.Environment;
+import io.dropwizard.db.DataSourceFactory;
+import io.dropwizard.migrations.MigrationsBundle;
 
 public class DropBookmarksApplication extends Application<DropBookmarksConfiguration> {
 
@@ -22,13 +24,17 @@ public class DropBookmarksApplication extends Application<DropBookmarksConfigura
 
     @Override
     public void initialize(final Bootstrap<DropBookmarksConfiguration> bootstrap) {
-        // TODO: application initialization
+        bootstrap.addBundle(new MigrationsBundle<DropBookmarksConfiguration>() {
+            @Override
+            public DataSourceFactory getDataSourceFactory(DropBookmarksConfiguration configuration) {
+                return configuration.getDataSourceFactory();
+            }
+        });
     }
 
     @Override
     public void run(final DropBookmarksConfiguration configuration,
                     final Environment environment) {
-        // TODO: implement application
 
         environment.jersey().register(new HelloResource());
 
