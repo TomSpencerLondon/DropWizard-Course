@@ -1,12 +1,16 @@
 package com.udemy.dropbookmarks.resources;
 
+import com.udemy.dropbookmarks.DropBookmarksConfiguration;
 import com.udemy.dropbookmarks.auth.HelloAuthenticator;
 import com.udemy.dropbookmarks.core.User;
 import io.dropwizard.auth.AuthDynamicFeature;
 import io.dropwizard.auth.AuthValueFactoryProvider;
+import io.dropwizard.auth.Authenticator;
 import io.dropwizard.auth.basic.BasicCredentialAuthFilter;
+import io.dropwizard.auth.basic.BasicCredentials;
 import io.dropwizard.testing.junit5.DropwizardExtensionsSupport;
 import io.dropwizard.testing.junit5.ResourceExtension;
+import jakarta.ws.rs.core.Configuration;
 import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.Response;
 import org.glassfish.jersey.test.grizzly.GrizzlyWebTestContainerFactory;
@@ -22,15 +26,15 @@ public class HelloResourceSecuredTest {
             .builder()
             .setTestContainerFactory(new GrizzlyWebTestContainerFactory())
             .addProvider(new AuthDynamicFeature(new BasicCredentialAuthFilter.Builder<User>()
-                    .setAuthenticator(new HelloAuthenticator())
+                    .setAuthenticator(new HelloAuthenticator("password"))
                     .buildAuthFilter()))
             .addProvider(new AuthValueFactoryProvider.Binder<>(User.class))
             .addResource(new HelloResource())
             .build();
 
+
     @Test
     public void testProtectedResource(){
-
         String credential = "Basic " + Base64.getEncoder().encodeToString("username:password".getBytes());
 
         Response response = resourceExtension

@@ -465,3 +465,7 @@ public class HelloResourceSecuredTest {
 }
 ```
 
+### Configuration and HTTPS
+
+
+

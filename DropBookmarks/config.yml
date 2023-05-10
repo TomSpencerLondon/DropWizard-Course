@@ -2,3 +2,4 @@ logging:
   level: INFO
   loggers:
     com.udemy: DEBUG
+password: password
