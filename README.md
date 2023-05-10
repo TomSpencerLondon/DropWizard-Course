@@ -287,20 +287,22 @@ We can add the following dependencies for testing our resource:
 We can then write our first test on the HelloResource:
 
 ```java
-class HelloResourceTest extends JerseyTest {
-    @Override
-    protected Application configure() {
-        return new ResourceConfig(HelloResource.class);
-    }
+@ExtendWith(DropwizardExtensionsSupport.class)
+class HelloResourceTest {
+  private static final ResourceExtension EXT = ResourceExtension.builder()
+          .setTestContainerFactory(new GrizzlyWebTestContainerFactory())
+          .addResource(new HelloResource())
+          .build();
 
-    @Test
-    void works() {
-        Response response = target("/hello").request().get();
-        String content = response.readEntity(String.class);
 
-        assertThat(content)
-                .isEqualTo("Hello World");
-    }
+  @Test
+  void returnsMessage() {
+    Response response = EXT.target("/hello").request().get();
+    String content = response.readEntity(String.class);
+
+    assertThat(content)
+            .isEqualTo("Hello World");
+  }
 }
 ```
 This link is quite useful for adding tests for Jersey:
@@ -416,3 +418,50 @@ Content-Length: 19
 Hello secured world
 
 ```
+
+We can also use the -u option:
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course$ curl -w "\n" localhost:8080/hello/secured -i -u username:password
+HTTP/1.1 200 OK
+Date: Wed, 10 May 2023 08:22:19 GMT
+Content-Type: text/plain
+Vary: Accept-Encoding
+Content-Length: 19
+
+Hello secured world
+
+```
+
+We can then add a test for our authentication:
+```java
+@ExtendWith(DropwizardExtensionsSupport.class)
+public class HelloResourceSecuredTest {
+    public ResourceExtension resourceExtension = ResourceExtension
+            .builder()
+            .setTestContainerFactory(new GrizzlyWebTestContainerFactory())
+            .addProvider(new AuthDynamicFeature(new BasicCredentialAuthFilter.Builder<User>()
+                    .setAuthenticator(new HelloAuthenticator())
+                    .buildAuthFilter()))
+            .addProvider(new AuthValueFactoryProvider.Binder<>(User.class))
+            .addResource(new HelloResource())
+            .build();
+
+    @Test
+    public void testProtectedResource(){
+
+        String credential = "Basic " + Base64.getEncoder().encodeToString("username:password".getBytes());
+
+        Response response = resourceExtension
+                .target("/hello/secured")
+                .request()
+                .header(HttpHeaders.AUTHORIZATION, credential)
+                .get();
+
+        int status = response.getStatus();
+        assertThat(status)
+                .isEqualTo(200);
+    }
+
+}
+```
+

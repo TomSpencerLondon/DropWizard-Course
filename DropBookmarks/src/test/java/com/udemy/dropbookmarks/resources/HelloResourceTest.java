@@ -1,23 +1,25 @@
 package com.udemy.dropbookmarks.resources;
 
-import jakarta.ws.rs.core.Application;
+import io.dropwizard.testing.junit5.DropwizardExtensionsSupport;
+import io.dropwizard.testing.junit5.ResourceExtension;
 import jakarta.ws.rs.core.Response;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.glassfish.jersey.test.JerseyTest;
+import org.glassfish.jersey.test.grizzly.GrizzlyWebTestContainerFactory;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
+@ExtendWith(DropwizardExtensionsSupport.class)
+class HelloResourceTest {
+    private static final ResourceExtension EXT = ResourceExtension.builder()
+            .setTestContainerFactory(new GrizzlyWebTestContainerFactory())
+            .addResource(new HelloResource())
+            .build();
 
-class HelloResourceTest extends JerseyTest {
-    @Override
-    protected Application configure() {
-        return new ResourceConfig(HelloResource.class);
-    }
 
     @Test
-    void works() {
-        Response response = target("/hello").request().get();
+    void returnsMessage() {
+        Response response = EXT.target("/hello").request().get();
         String content = response.readEntity(String.class);
 
         assertThat(content)
