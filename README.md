@@ -382,6 +382,37 @@ public class DropBookmarksApplication extends Application<DropBookmarksConfigura
 ```
 
 We can create a base 64 version of our username and password:
+https://www.base64encode.org/
+
 ![image](https://github.com/TomSpencerLondon/DropWizard-Course/assets/27693622/11893caf-6966-4eb0-839b-575df18f6d9e)
 And then query the API with Basic Authorization:
 ![image](https://github.com/TomSpencerLondon/LeetCode/assets/27693622/e9bf404f-0e56-4fac-9eb5-c5a3b342d17e)
+
+We can also use Basic Auth and provide the username and password. Postman would then generate the encoded string for us.
+
+We can also check the secured resource using curl:
+
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course$ curl -w "\n" localhost:8080/hello/secured -i
+HTTP/1.1 401 Unauthorized
+Date: Wed, 10 May 2023 08:19:19 GMT
+WWW-Authenticate: Basic realm="SUPER SECRET STUFF"
+Content-Type: text/plain
+Content-Length: 49
+
+Credentials are required to access this resource.
+
+```
+
+We can add the required authorisation with the header option and the base 64 encoded string we gathered earlier:
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course$ curl -w "\n" localhost:8080/hello/secured -i -H "Authorization: Basic dXNlcm5hbWU6cGFzc3dvcmQ="
+HTTP/1.1 200 OK
+Date: Wed, 10 May 2023 08:21:07 GMT
+Content-Type: text/plain
+Vary: Accept-Encoding
+Content-Length: 19
+
+Hello secured world
+
+```
