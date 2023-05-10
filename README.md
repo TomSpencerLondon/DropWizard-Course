@@ -1260,3 +1260,39 @@ This produces a changelog.xml file in /target:
 </databaseChangeLog>
 ```
 
+We can also check the changesets that have not been applied with:
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course/DropBookmarks$ java -jar target/DropBookmarks-1.0-SNAPSHOT.jar db status config.yml
+WARN  [2023-05-10 15:27:19,896] org.hibernate.validator.internal.properties.javabean.JavaBeanExecutable: HV000254: Missing parameter metadata for ResponseMeteredLevel(String, int), which declares implicit or synthetic parameters. Automatic resolution of generic type information for method parameters may yield incorrect results if multiple parameters have the same erasure. To solve this, compile your code with the '-parameters' flag.
+Loading class `com.mysql.jdbc.Driver'. This is deprecated. The new driver class is `com.mysql.cj.jdbc.Driver'. The driver is automatically registered via the SPI and manual loading of the driver class is generally unnecessary.
+INFO  [2023-05-10 14:27:21,015] liquibase.changelog.StandardChangeLogHistoryService: Reading from DropBookmarks.DATABASECHANGELOG
+1 changesets have not been applied to root@localhost@jdbc:mysql://localhost:3306/DropBookmarks
+```
+
+We can apply the changeset with:
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course/DropBookmarks$ java -jar target/DropBookmarks-1.0-SNAPSHOT.jar db migrate -i DEV config.yml
+WARN  [2023-05-10 15:28:43,038] org.hibernate.validator.internal.properties.javabean.JavaBeanExecutable: HV000254: Missing parameter metadata for ResponseMeteredLevel(String, int), which declares implicit or synthetic parameters. Automatic resolution of generic type information for method parameters may yield incorrect results if multiple parameters have the same erasure. To solve this, compile your code with the '-parameters' flag.
+Loading class `com.mysql.jdbc.Driver'. This is deprecated. The new driver class is `com.mysql.cj.jdbc.Driver'. The driver is automatically registered via the SPI and manual loading of the driver class is generally unnecessary.
+INFO  [2023-05-10 14:28:43,959] liquibase.lockservice.StandardLockService: Successfully acquired change log lock
+INFO  [2023-05-10 14:28:44,492] liquibase.changelog.StandardChangeLogHistoryService: Reading from DropBookmarks.DATABASECHANGELOG
+Running Changeset: migrations.xml::3::tom
+INFO  [2023-05-10 14:28:44,597] liquibase.changelog.ChangeSet: New row inserted into users
+INFO  [2023-05-10 14:28:44,612] liquibase.changelog.ChangeSet: ChangeSet migrations.xml::3::tom ran successfully in 22ms
+INFO  [2023-05-10 14:28:44,635] liquibase.lockservice.StandardLockService: Successfully released change log lock
+```
+
+We can then verify the changeset has been applied:
+```bash
+tom@tom-ubuntu:~/Projects/Dropwizard-Course/DropBookmarks$ java -jar target/DropBookmarks-1.0-SNAPSHOT.jar db status config.yml
+WARN  [2023-05-10 15:29:19,667] org.hibernate.validator.internal.properties.javabean.JavaBeanExecutable: HV000254: Missing parameter metadata for ResponseMeteredLevel(String, int), which declares implicit or synthetic parameters. Automatic resolution of generic type information for method parameters may yield incorrect results if multiple parameters have the same erasure. To solve this, compile your code with the '-parameters' flag.
+Loading class `com.mysql.jdbc.Driver'. This is deprecated. The new driver class is `com.mysql.cj.jdbc.Driver'. The driver is automatically registered via the SPI and manual loading of the driver class is generally unnecessary.
+INFO  [2023-05-10 14:29:21,058] liquibase.changelog.StandardChangeLogHistoryService: Reading from DropBookmarks.DATABASECHANGELOG
+root@localhost@jdbc:mysql://localhost:3306/DropBookmarks is up to date
+
+```
+
+
+### Connecting to a Relational Database
+
+
